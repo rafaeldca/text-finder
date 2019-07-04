@@ -1,4 +1,5 @@
-﻿using System;
+﻿using System.Linq;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -9,25 +10,67 @@ namespace stringFinder
     {
         static void Main(string[] args)
         {
-            System.Console.WriteLine(@"Type the location of the folder to inspect (ie: ""C:\docs\"" ) ");
-            string fileLocation = Console.ReadLine();
+            try
+            {
+                System.Console.WriteLine(@"Type the location of the folder to inspect (ie: ""C:\docs\"" ) ");
+                string[] list = fileList(@Console.ReadLine());
 
-            System.Console.WriteLine("Type the regular expression to match");
-            //TODO add string input validation
-            string regexPattern = Console.ReadLine(); // Example:  @"(Session\[""[a-zA-Z0-9]\w+\""\])"
+                System.Console.WriteLine("Type the regular expression to match");
+                // Example:  @"(Session\[""[a-zA-Z0-9]\w+\""\])"
+                Regex pattern = new Regex(@Console.ReadLine());
 
-            System.Console.WriteLine("Chose an optional file name? (default is : MyMatches)");
-            string fileName = Console.ReadLine();
-
-            string[] list = Program.fileList($"{fileLocation}");
-
-            Regex pattern = new Regex($"{regexPattern}");
+                System.Console.WriteLine("Chose an optional file name? (default is : MyMatches)");
+                string fileName = Console.ReadLine().ToString();
             
-            Find(list, pattern , fileName);
-
+                Find(list, pattern , fileName);
+            }
+            catch (System.Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
         }
 
         private static void Find(string[] list, Regex pattern, string fileName = "MyMatches")
+        {
+            List<string> resultList = FindMatches(list, pattern);
+
+            if (resultList == null || !resultList.Any())
+            {
+                System.Console.WriteLine("No matches found!");
+            }
+
+            ProcessMatches(fileName, resultList);
+            
+            Console.WriteLine("Process Completed!");
+
+        }
+        private static bool ProcessMatches(string fileName, List<string> resultList)
+        {
+            try
+            {
+                Console.WriteLine("Writing File ");
+
+                var outFileName = $"{fileName}-{DateTime.Now.ToFileTime()}.txt";
+
+                using (var fs = new FileStream(outFileName, FileMode.CreateNew))
+                {
+                    using (var sw = new StreamWriter(fs))
+                    {
+                        foreach (var r in resultList)
+                        {
+                            sw.WriteLine(r);
+                        }
+                    }
+                }
+                
+                return true;
+            }
+            catch (System.Exception)
+            {
+                throw new Exception();
+            }
+        }
+        private static List<string> FindMatches(string[] list, Regex pattern)
         {
             MatchCollection matches = null;
 
@@ -55,36 +98,19 @@ namespace stringFinder
 
             }
 
-            if (resultList != null)
-            {
-                Console.WriteLine("Writing File ");
-
-                var outFileName = $"{fileName}-{DateTime.Now.ToFileTime()}.txt";
-
-                using (var fs = new FileStream(outFileName, FileMode.CreateNew))
-                {
-                    using (var sw = new StreamWriter(fs))
-                    {
-                        foreach (var r in resultList)
-                        {
-                            sw.WriteLine(r);
-                        }
-                    }
-                }
-
-                Console.WriteLine("Process Completed!");
-
-            }
-
-            else
-            {
-                System.Console.WriteLine("No matches found!");
-            }
+            return resultList;
         }
-
         public static string[] fileList(string folder)
         {
-            return Directory.GetFiles($@"{folder}");
+            try
+            {
+                return Directory.GetFiles($@"{folder}");
+
+            }
+            catch (DirectoryNotFoundException)
+            {
+                throw new DirectoryNotFoundException();   
+            }
         }
     }
 }
